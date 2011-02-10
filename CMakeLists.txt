@@ -7,15 +7,15 @@ boost_project("Context"
     "Daniel Larimer"
   DESCRIPTION
     "User space context switching."
-  DEPENDS
   )
 
-file(GLOB_RECURSE headers boost/*.?pp)
+file(GLOB_RECURSE headers boost/*.* )
 boost_add_headers(${headers})
 
 set_property(SOURCE src/libtask/asm.S PROPERTY LANGUAGE C )
 boost_add_library( context
     SOURCES
+        src/protected_stack_posix.cpp
         src/libtask/asm.S
         src/libtask/context.c
 )
