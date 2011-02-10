@@ -13,8 +13,9 @@ boost_project("Context"
 file(GLOB_RECURSE headers include/boost/*.?pp)
 boost_add_headers(${headers})
 
-boost_add_library( boost_context
-    SOURCE
+set_property(SOURCE src/libtask/asm.S PROPERTY LANGUAGE C )
+boost_add_library( context
+    SOURCES
         src/libtask/asm.S
         src/libtask/context.c
 )
