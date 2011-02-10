@@ -10,7 +10,7 @@ boost_project("Context"
   DEPENDS
   )
 
-file(GLOB_RECURSE headers include/boost/*.?pp)
+file(GLOB_RECURSE headers boost/*.?pp)
 boost_add_headers(${headers})
 
 set_property(SOURCE src/libtask/asm.S PROPERTY LANGUAGE C )
