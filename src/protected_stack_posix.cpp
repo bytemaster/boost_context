@@ -66,9 +66,8 @@ protected_stack::protected_stack( std::size_t size) :
     std::size_t pages( helper::calc_pages( size_) );
     ++pages; // add guard page
     size__ = pages * helper::get_pagesize();
-
-    //int fd( ::open("/dev/zero", O_RDONLY) );
-    int fd( ::open("bigfile", O_RDONLY) );
+#ifndef __APPLE__
+    int fd( ::open("/dev/zero", O_RDONLY) );
     BOOST_ASSERT( -1 != fd);
     void * limit =
         ::mmap( 0, size__, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
@@ -78,10 +77,13 @@ protected_stack::protected_stack( std::size_t size) :
     ::close( fd);
     if ( ! limit) throw std::bad_alloc();
 
-    fprintf( stderr, "limit: %p  pagesize %p  ", limit, helper::get_pagesize() );
     int result( ::mprotect( limit, helper::get_pagesize(), PROT_NONE) );
     if( result != 0 ) perror( "mprotect" );
     BOOST_ASSERT( 0 == result);
+#else
+    void* limit = malloc( size__ );
+#endif
+
     address_ = static_cast< char * >( limit) + size__;
 }
 
@@ -91,7 +93,11 @@ protected_stack::~protected_stack()
     {
         BOOST_ASSERT( 0 < size_ && 0 < size__);
         void * limit = static_cast< char * >( address_) - size__;
+        #ifndef __APPLE__
         ::munmap( limit, size__);
+        #else
+        free( limit );
+        #endif 
     }
 }
 
