@@ -10,7 +10,7 @@
 #include <cstddef>
 
 #include <boost/config.hpp>
-#include <boost/move/move.hpp>
+#include <boost/move.hpp>
 
 #include <boost/context/detail/config.hpp>
 
