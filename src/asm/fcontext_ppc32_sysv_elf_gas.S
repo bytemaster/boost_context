@@ -67,126 +67,10 @@
  * *****************************************************************/
 
 .text
-.globl get_fcontext
+.globl boost_fcontext_jump
 .align 2
-.type get_fcontext,@function
-get_fcontext:
-    stw     %r13,  0(%r3)       # save R13
-    stw     %r14,  4(%r3)       # save R14
-    stw     %r15,  8(%r3)       # save R15
-    stw     %r16,  12(%r3)      # save R16
-    stw     %r17,  16(%r3)      # save R17
-    stw     %r18,  20(%r3)      # save R18
-    stw     %r19,  24(%r3)      # save R19
-    stw     %r20,  28(%r3)      # save R20
-    stw     %r21,  32(%r3)      # save R21
-    stw     %r22,  36(%r3)      # save R22
-    stw     %r23,  40(%r3)      # save R23
-    stw     %r24,  44(%r3)      # save R24
-    stw     %r25,  48(%r3)      # save R25
-    stw     %r26,  52(%r3)      # save R26
-    stw     %r27,  56(%r3)      # save R27
-    stw     %r28,  60(%r3)      # save R28
-    stw     %r29,  64(%r3)      # save R29
-    stw     %r30,  68(%r3)      # save R30
-    stw     %r31,  72(%r3)      # save R31
-    stw     %r1,   76(%r3)      # save SP
-
-    mfcr    %r0                 # load CR
-    stw     %r0,   80(%r3)      # save CR
-    mflr    %r0                 # load LR
-    stw     %r0,   84(%r3)      # save LR
-    stw     %r0,   88(%r3)      # save LR as PC
-
-    stfd    %f14,  96(%r3)      # save F14
-    stfd    %f15,  104(%r3)     # save F15
-    stfd    %f16,  112(%r3)     # save F16
-    stfd    %f17,  120(%r3)     # save F17
-    stfd    %f18,  128(%r3)     # save F18
-    stfd    %f19,  136(%r3)     # save F19
-    stfd    %f20,  144(%r3)     # save F20
-    stfd    %f21,  152(%r3)     # save F21
-    stfd    %f22,  160(%r3)     # save F22
-    stfd    %f23,  168(%r3)     # save F23
-    stfd    %f24,  176(%r3)     # save F24
-    stfd    %f25,  184(%r3)     # save F25
-    stfd    %f26,  192(%r3)     # save F26
-    stfd    %f27,  200(%r3)     # save F27
-    stfd    %f28,  208(%r3)     # save F28
-    stfd    %f29,  216(%r3)     # save F29
-    stfd    %f30,  224(%r3)     # save F30
-    stfd    %f31,  232(%r3)     # save F31
-    mffs    %f0                 # load FPSCR
-    stfd    %f0,   240(%r3)     # save FPSCR
-
-    li      %r3,   0            # return value set to zero
-    blr
-.size get_fcontext, .-get_fcontext
-
-.text
-.globl set_fcontext
-.align 2
-.type set_fcontext,@function
-set_fcontext:
-    lwz     %r13,  0(%r3)       # restore R13
-    lwz     %r14,  4(%r3)       # restore R14
-    lwz     %r15,  8(%r3)       # restore R15
-    lwz     %r16,  12(%r3)      # restore R16
-    lwz     %r17,  16(%r3)      # restore R17
-    lwz     %r18,  20(%r3)      # restore R18
-    lwz     %r19,  24(%r3)      # restore R19
-    lwz     %r20,  28(%r3)      # restore R20
-    lwz     %r21,  32(%r3)      # restore R21
-    lwz     %r22,  36(%r3)      # restore R22
-    lwz     %r23,  40(%r3)      # restore R23
-    lwz     %r24,  44(%r3)      # restore R24
-    lwz     %r25,  48(%r3)      # restore R25
-    lwz     %r26,  52(%r3)      # restore R26
-    lwz     %r27,  56(%r3)      # restore R27
-    lwz     %r28,  60(%r3)      # restore R28
-    lwz     %r29,  64(%r3)      # restore R29
-    lwz     %r30,  68(%r3)      # restore R30
-    lwz     %r31,  72(%r3)      # restore R31
-    lwz     %r1,   76(%r3)      # restore SP
-
-    lwz     %r0,   80(%r3)      # restore CR
-    mtcr    %r0                 # restore CR
-    lwz     %r0,   84(%r3)      # load LR
-    mtlr    %r0                 # restore LR
-
-    lfd     %f14,  96(%r3)      # restore F14
-    lfd     %f15,  104(%r3)     # restore F15
-    lfd     %f16,  112(%r3)     # restore F16
-    lfd     %f17,  120(%r3)     # restore F17
-    lfd     %f18,  128(%r3)     # restore F18
-    lfd     %f19,  136(%r3)     # restore F19
-    lfd     %f20,  144(%r3)     # restore F20
-    lfd     %f21,  152(%r3)     # restore F21
-    lfd     %f22,  160(%r3)     # restore F22
-    lfd     %f23,  168(%r3)     # restore F23
-    lfd     %f24,  176(%r3)     # restore F24
-    lfd     %f25,  184(%r3)     # restore F25
-    lfd     %f26,  192(%r3)     # restore F26
-    lfd     %f27,  200(%r3)     # restore F27
-    lfd     %f28,  208(%r3)     # restore F28
-    lfd     %f29,  216(%r3)     # restore F29
-    lfd     %f30,  224(%r3)     # restore F30
-    lfd     %f31,  232(%r3)     # restore F31
-    lfd     %f0,   240(%r3)     # load FPSCR
-    mtfsf   0xff,  %f0          # restore FPSCR
-
-    lwz     %r0,   88(%r3)      # restore PC
-    lwz     %r3,   92(%r3)      # load void pointer as argument
-    mtctr   %r0                 # restore CTR
-
-    bctr                        # jump to context
-.size set_fcontext, .-set_fcontext
-
-.text
-.globl swap_fcontext
-.align 2
-.type swap_fcontext,@function
-swap_fcontext:
+.type boost_fcontext_jump,@function
+boost_fcontext_jump:
     stw     %r13,  0(%r3)       # save R13
     stw     %r14,  4(%r3)       # save R14
     stw     %r15,  8(%r3)       # save R15
@@ -288,13 +172,14 @@ swap_fcontext:
     mtctr   %r0                 # restore CTR
 
     bctr                        # jump to context
-.size swap_fcontext, .-swap_fcontext
+.size boost_fcontext_jump, .-boost_fcontext_jump
 
 .text
-.globl make_fcontext
+.globl boost_fcontext_make
 .align 2
-.type make_fcontext,@function
-make_fcontext:
+.type boost_fcontext_make,@function
+boost_fcontext_make:
+    stw     %r3, 0(%r3)         # save the current context
     stw     %r4, 88(%r3)        # save the address of the function supposed to to be run
     stw     %r5, 92(%r3)        # save void pointer
     lwz     %r0, 248(%r3)       # load the stack base
@@ -302,17 +187,17 @@ make_fcontext:
     subf    %r0, %r4, %r0       # reserve 16 bytes on top of the stack
     stw     %r0, 76(%r3)        # save the stack base
     lwz     %r0, 256(%r3)       # load address of next user context
-    stw     %r0, 0(%r3)         # save the next context
-#if defined(__PIC__) || defined(__pic__)
+    stw     %r0, 4(%r3)         # save the next context
+#ifdef __PIC__
     mflr    %r0                 # load LR
-    bl      1f                  # jump to lable 1
+    bl      1f                  # jump to label 1
 1:
     mflr    %r4                             # load LR
     addi    %r4, %r4, link_fcontext - 1b    # calulate absolute address of link_fcontext
     mtlr    %r0                             # restore LR
 #else
-    lis     %r4, link_fcontext@ha       # get hight address of link_fcontext
-    addi    %r4, %r4, link_fcontext@l   # get low address of link_fcontext
+   lis     %r4, link_fcontext@ha       # get hight address of link_fcontext
+   addi    %r4, %r4, link_fcontext@l   # get low address of link_fcontext
 #endif
     stw     %r4, 84(%r3)        # save address of link_fcontext
 
@@ -320,13 +205,21 @@ make_fcontext:
     blr
 
 link_fcontext:
-    mr      %r3, %r13
-    cmpwi   %r3, 0              # test if a next context was given
-#if defined(__PIC__) || defined(__pic__)
-    bne     set_fcontext@PLT    # install next context
-    b       _exit@PLT           # exit application
+    mr.     %r3, %r13
+    mr.     %r4, %r14
+    beq     2f                  # test if a next context was given
+
+#ifdef __PIC__
+    bl      boost_fcontext_jump@plt    # install next context
+
+2:
+    li      %r3,  0             # set return value to zero
+    bl      _exit@plt           # exit application
 #else
-    bne     set_fcontext        # install next context
-    b       _exit               # exit application
+    bl      boost_fcontext_jump  # install next context
+
+2:
+    li      %r3,  0             # set return value to zero
+    bl      _exit               # exit application
 #endif
-.size make_fcontext, .-make_fcontext
+.size boost_fcontext_make, .-boost_fcontext_make

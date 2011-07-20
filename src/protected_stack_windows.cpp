@@ -12,11 +12,13 @@ extern "C" {
 #include <windows.h>
 }
 
-#include <cmath>
 #include <stdexcept>
 
 #include <boost/config.hpp>
 #include <boost/assert.hpp>
+#include <boost/format.hpp>
+
+#include <boost/context/stack_helper.hpp>
 
 #ifdef BOOST_HAS_ABI_HEADERS
 #  include BOOST_ABI_PREFIX
@@ -24,40 +26,8 @@ extern "C" {
 
 # if defined(BOOST_MSVC)
 # pragma warning(push)
-# pragma warning(disable:4244)
-# pragma warning(disable:4267)
+# pragma warning(disable:4244 4267)
 # endif
-
-namespace {
-
-struct helper
-{
-    static DWORD get_pagesize_()
-    {
-        SYSTEM_INFO si;
-        ::GetSystemInfo( & si);
-        return si.dwPageSize;
-    }
-
-    static DWORD get_pagesize()
-    {
-        static std::size_t pagesize( get_pagesize_() );
-        return pagesize;
-    }
-
-    static std::size_t calc_pages( std::size_t stacksize)
-    {
-        double x( stacksize / get_pagesize() );
-        if ( 0 != stacksize % get_pagesize() )
-            x += 0.5;
-        std::size_t tmp( ( x - std::floor( x) >= 0.5 )
-            ? static_cast< std::size_t >( std::ceil( x) )
-            : static_cast< std::size_t >( std::floor( x) ) );
-        return tmp;
-    }
-};
-
-}
 
 namespace boost {
 namespace contexts {
@@ -69,21 +39,30 @@ protected_stack::protected_stack() :
 protected_stack::protected_stack( std::size_t size) :
     size_( size), size__( 0), address_( 0)
 {
-    if ( 16 >= size_)
-        throw std::invalid_argument("invalid stack size");
+    if ( stack_helper::minimal_stacksize() > size_)
+        throw std::invalid_argument(
+            boost::str( boost::format("invalid stack size: must be at least %d bytes")
+                % stack_helper::minimal_stacksize() ) );
 
-    std::size_t pages( helper::calc_pages( size_) );
-    ++pages; // add guard page
-    size__ = pages * helper::get_pagesize();
+    if ( ! stack_helper::unlimited_stacksize() && ( stack_helper::maximal_stacksize() < size_) )
+        throw std::invalid_argument(
+            boost::str( boost::format("invalid stack size: must not be larger than %d bytes")
+                % stack_helper::maximal_stacksize() ) );
 
+    const std::size_t pages( stack_helper::page_count( size_) + 1); // add +1 for guard page
+    size__ = pages * stack_helper::pagesize();
+
+#ifndef BOOST_CONTEXT_FIBER
     void * limit = ::VirtualAlloc( 0, size__, MEM_COMMIT, PAGE_READWRITE);
     if ( ! limit) throw std::bad_alloc();
 
     DWORD old_options;
-    BOOL result = ::VirtualProtect( limit, helper::get_pagesize(), PAGE_NOACCESS, & old_options);
-    BOOST_ASSERT( TRUE == result);
+    const BOOL result = ::VirtualProtect(
+        limit, stack_helper::pagesize(), PAGE_READWRITE | PAGE_GUARD /*PAGE_NOACCESS*/, & old_options);
+    BOOST_ASSERT( FALSE != result);
 
     address_ = static_cast< char * >( limit) + size__;
+#endif
 }
 
 protected_stack::~protected_stack()
@@ -126,10 +105,22 @@ protected_stack::swap( protected_stack & other)
 
 bool
 protected_stack::operator!() const
-{ return 0 == address_; }
+{
+#ifdef BOOST_CONTEXT_FIBER
+    return 0 == size_;
+#else
+    return 0 == address_;
+#endif
+}
 
 protected_stack::operator unspecified_bool_type() const
-{ return 0 == address_ ? 0 : unspecified_bool; }
+{
+#ifdef BOOST_CONTEXT_FIBER
+    return 0 == size_ ? 0 : unspecified_bool;
+#else
+    return 0 == address_ ? 0 : unspecified_bool;
+#endif
+}
 
 }}
 

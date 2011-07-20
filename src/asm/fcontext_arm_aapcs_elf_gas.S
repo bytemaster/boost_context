@@ -46,39 +46,10 @@
  * *****************************************************************/
 
 .text
-.globl get_fcontext
+.globl boost_fcontext_jump
 .align 2
-.type get_fcontext,%function
-get_fcontext:
-    stmia   a1, {v1-v8,sp-lr}       @ save V1-V8,SP-LR
-    str     lr, [a1,#40]            @ save LR as PC
-#if (defined(__VFP_FP__) && !defined(__SOFTFP__))
-    ldr     a3, [a1,#48]
-    stmia   a3, {s16-s31}           @ save S16-S31
-#endif
-    mov     a1, #0                  @ return value set to zero
-    bx      lr                      @ return to caller
-.size get_fcontext,.-get_fcontext
-
-.text
-.globl set_fcontext
-.align 2
-.type set_fcontext,%function
-set_fcontext:
-    mov     a2, a1
-    ldr     a1, [a2,#44]            @ restore A1
-#if (defined(__VFP_FP__) && !defined(__SOFTFP__))
-    ldr     a3, [a2,#48]
-    ldmia   a3, {s16-s31}           @ restore S16-S31
-#endif
-    ldmia   a2, {v1-v8,sp-pc}       @ restore V1-V8,SP-PC
-.size set_fcontext,.-set_fcontext
-
-.text
-.globl swap_fcontext
-.align 2
-.type swap_fcontext,%function
-swap_fcontext:
+.type boost_fcontext_jump,%function
+boost_fcontext_jump:
     stmia   a1, {v1-v8,sp-lr}       @ save V1-V8,SP-LR
     str     lr, [a1,#40]            @ save LR as PC
 #if (defined(__VFP_FP__) && !defined(__SOFTFP__))
@@ -92,32 +63,39 @@ swap_fcontext:
     ldmia   a3, {s16-s31}           @ restore S16-S31
 #endif
     ldmia   a2, {v1-v8,sp-pc}       @ restore v1-V8,SP-PC
-.size swap_fcontext,.-swap_fcontext
+.size boost_fcontext_jump,.-boost_fcontext_jump
 
 .text
-.globl make_fcontext
+.globl boost_fcontext_make
 .align 2
-.type make_fcontext,%function
-make_fcontext:
+.type boost_fcontext_make,%function
+boost_fcontext_make:
+    str     a1, [a1,#0]         @ save the address of the current context
     str     a2, [a1,#40]        @ save address of the function supposed to be run
     str     a3, [a1,#44]        @ save void pointer
     ldr     a2, [a1,#112]       @ load the stack base
     str     a2, [a1,#32]        @ save the stack base
     ldr     a2, [a1,#120]       @ load the address of the next context
-    str     a2, [a1,#0]         @ save the address of the next context
+    str     a2, [a1,#4]         @ save the address of the next context
     adr     a2, link_fcontext   @ load address of link_fcontext
     str     a2, [a1,#36]        @ save address of link_fcontext
     mov     a1, #0
     bx      lr
 
 link_fcontext:
-    mov     a1, v1              @ load the adddress of the next context
-    teq     a1, #0              @ test if the address of the next context is a null pointer
-#if defined(__PIC__) || defined(__pic__)
-    bne     set_fcontext@PLT    @ install next context
-    bl      _exit@PLT           @ exit application
+    mov     a1, v1              @ load the adddress of the current context
+    mov     a2, v2              @ load the adddress of the next context
+    teq     a2, #0              @ test if the address of the next context is a null pointer
+
+#ifdef __PIC__
+    bne     boost_fcontext_jump@PLT    @ install next context
+
+    mov     a1, #0
+    bl      _exit@PLT                  @ exit application
 #else
-    bne     set_fcontext        @ install next context
-    bl      _exit               @ exit application
+    bne     boost_fcontext_jump        @ install next context
+
+    mov     a1, #0
+    bl      _exit                      @ exit application
 #endif
-.size make_fcontext,.-make_fcontext
+.size boost_fcontext_make,.-boost_fcontext_make

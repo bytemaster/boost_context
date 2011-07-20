@@ -41,68 +41,12 @@
 ;  ----------------------------------------------------------------------------------
 
 EXTERN  _exit:PROC                  ; standard C library function
+EXTERN  boost_fcontext_seh:PROC		; exception handler
 .code
-get_fcontext PROC
-    mov     [rcx],       r12        ; save R12
-    mov     [rcx+08h],   r13        ; save R13
-    mov     [rcx+010h],  r14        ; save R14
-    mov     [rcx+018h],  r15        ; save R15
-    mov     [rcx+020h],  rdi        ; save RDI
-    mov     [rcx+028h],  rsi        ; save RSI
-    mov     [rcx+030h],  rbx        ; save RBX
-    mov     [rcx+038h],  rbp        ; save RBP
 
-    mov     rdx,         [rcx+060h]
-    fxsave  [rdx]                   ; save fp
+boost_fcontext_jump PROC EXPORT FRAME:boost_fcontext_seh
+	.endprolog
 
-    mov     rdx,         gs:[030h]  ; load NT_TIB
-    mov     rax,         [rdx+08h]  ; load current stack base
-    mov     [rcx+068h],  rax        ; save current stack base
-    mov     rax,         [rdx+010h] ; load current stack limit
-    mov     [rcx+070h],  rax        ; save current stack limit
-    mov     rax,         [rdx+018h] ; load fiber local storage
-    mov     [rcx+080h],  rax        ; save fiber local storage
-
-    lea     rax,         [rsp+08h]  ; exclude the return address
-    mov     [rcx+040h],  rax        ; save as stack pointer
-    mov     rax,         [rsp]      ; load return address
-    mov     [rcx+048h],  rax        ; save return address
-
-    xor     rax,         rax        ; set RAX to zero
-    ret                             ; return
-get_fcontext ENDP
-
-set_fcontext PROC
-    mov     r12,        [rcx]       ; restore R12
-    mov     r13,        [rcx+08h]   ; restore R13
-    mov     r14,        [rcx+010h]  ; restore R14
-    mov     r15,        [rcx+018h]  ; restore R15
-    mov     rdi,        [rcx+020h]  ; restore RDI
-    mov     rsi,        [rcx+028h]  ; restore RSI
-    mov     rbx,        [rcx+030h]  ; restore RBX
-    mov     rbp,        [rcx+038h]  ; restore RBP
-
-    mov     rdx,        [rcx+060h]
-    fxrstor [rdx]                   ; restore fp
-
-    mov     rdx,        gs:[030h]   ; load NT_TIB
-    mov     rax,        [rcx+068h]  ; load stack base
-    mov     [rdx+08h],  rax         ; restore stack base
-    mov     rax,        [rcx+070h]  ; load stack limit
-    mov     [rdx+010h], rax         ; restore stack limit
-    mov     rax,        [rcx+080h]  ; load fiber local storage
-    mov     [rdx+018h], rax         ; restore fiber local storage
-
-    mov     rsp,        [rcx+040h]  ; restore RSP
-    mov     rax,        [rcx+048h]  ; fetch the return address to return to
-    push    rax                     ; push the return address on the new stack so we can return there
-    mov     rcx,        [rcx+050h]  ; restore RCX as first argument for called context
-
-    xor     rax,        rax         ; set RAX to zero
-    ret                             ; 'ret' will pop the return address of the code and jump to it
-set_fcontext ENDP
-
-swap_fcontext PROC
     mov     [rcx],       r12        ; save R12
     mov     [rcx+08h],   r13        ; save R13
     mov     [rcx+010h],  r14        ; save R14
@@ -150,37 +94,45 @@ swap_fcontext PROC
     mov     [r8+018h],  rax         ; restore fiber local storage
 
     mov     rsp,        [rdx+040h]  ; restore RSP
-    mov     rax,        [rdx+048h]  ; fetch the address to returned to
-    push    rax                     ; push the return address on the new stack so we can return there
+    mov     r8,         [rdx+048h]  ; fetch the address to returned to
     mov     rcx,        [rdx+050h]  ; restore RCX as first argument for called context
 
     xor     rax,        rax         ; set RAX to zero
-    ret                             ; 'ret' will pop the return address of the code and jump to it
-swap_fcontext ENDP
+    jmp     r8                      ; indirect jump to caller
+boost_fcontext_jump ENDP
 
-make_fcontext PROC
+boost_fcontext_make PROC EXPORT
+    mov  [rcx],         rcx         ; store the address of current context
     mov  [rcx+048h],    rdx         ; save the address of the function supposed to run
     mov  [rcx+050h],    r8          ; save the the void pointer
     mov  rdx,           [rcx+068h]  ; load the address where the context stack beginns
-    lea  rdx,           [rdx-0408h] ; reserve space for return address + 32byte parameter area, must be 16 byte border
+    lea  rdx,           [rdx-028h]  ; reserve space for the last frame on stack, (RSP + 8) % 16 == 0
     mov  [rcx+040h],    rdx         ; save the address where the context stack beginns
 
     mov  rax,       [rcx+078h]      ; load the address of the next context
-    mov  [rcx],     rax             ; save the address of next context
-    lea  rax,       link_fcontext   ; helper code executed after fn() returns
+    mov  [rcx+08h], rax             ; save the address of next context
+
+    mov     rax,         [rcx+060h]
+    fxsave  [rax]                   ; save fp
+
+    lea  rax,       boost_fcontext_link   ; helper code executed after fn() returns
     mov  [rdx],     rax             ; set the return address to the helper function
 
     xor  rax,       rax             ; set RAX to zero
-    ret                             ; return 0
-make_fcontext ENDP
+    ret
+boost_fcontext_make ENDP
 
-link_fcontext PROC
-    mov   rcx,      r12
-    test  rcx,      rcx             ; test if a next context was given
+boost_fcontext_link PROC
+    test  r13,      r13             ; test if a next context was given
     je    finish                    ; jump to finish
-    call  set_fcontext              ; install next context
+
+	mov   rcx,      r12             ; first argument eq. address of current context
+	mov   rdx,      r13             ; second argumnet eq. address of next context
+    call  boost_fcontext_jump       ; install next context
 
 finish:
+	xor   rcx,      rcx
     call  _exit                     ; exit application
-link_fcontext ENDP
+    hlt
+boost_fcontext_link ENDP
 END

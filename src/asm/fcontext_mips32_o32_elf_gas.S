@@ -39,80 +39,11 @@
  * *****************************************************************/
 
 .text
-.globl get_fcontext
+.globl boost_fcontext_jump
 .align 2
-.type get_fcontext,@function
-.ent get_fcontext
-get_fcontext:
-    sw      $s0, ($a0)      # save S0
-    sw      $s1, 8($a0)     # save S1
-    sw      $s2, 16($a0)    # save S2
-    sw      $s3, 24($a0)    # save S3
-    sw      $s4, 32($a0)    # save S4
-    sw      $s5, 40($a0)    # save S5
-    sw      $s6, 48($a0)    # save S6
-    sw      $s7, 56($a0)    # save S7
-    sw      $gp, 64($a0)    # save GP
-    sw      $sp, 72($a0)    # save SP
-    sw      $s8, 80($a0)    # save S8
-    sw      $ra, 88($a0)    # save RA
-    sw      $ra, 96($a0)    # save RA as PC
-
-#if defined(__mips_hard_float)
-    s.d     $f20, 112($a0)  # save F20
-    s.d     $f22, 120($a0)  # save F22
-    s.d     $f24, 128($a0)  # save F24
-    s.d     $f26, 136($a0)  # save F26
-    s.d     $f28, 144($a0)  # save F28
-    s.d     $f30, 152($a0)  # save F30
-#endif
-
-    move    $v0, $zero      # return value set to zero
-    j       $ra             # return to caller
-.end get_fcontext
-.size get_fcontext, .-get_fcontext
-
-.text
-.globl set_fcontext
-.align 2
-.type set_fcontext,@function
-.ent set_fcontext
-set_fcontext:
-    move    $t0, $a0        # let T0 point to fcontext
-    lw      $s0, ($t0)      # restore S0
-    lw      $s1, 8($t0)     # restore S1
-    lw      $s2, 16($t0)    # restore S2
-    lw      $s3, 24($t0)    # restore S3
-    lw      $s4, 32($t0)    # restore S4
-    lw      $s5, 40($t0)    # restore S5
-    lw      $s6, 48($t0)    # restore S6
-    lw      $s7, 56($t0)    # restore S7
-    lw      $gp, 64($t0)    # restore GP
-    lw      $sp, 72($t0)    # restore SP
-    lw      $s8, 80($t0)    # restore S8
-    lw      $ra, 88($t0)    # restore RA
-    lw      $a0, 104($t0)   # restore void pointer as argument
-
-#if defined(__mips_hard_float)
-    l.d     $f20, 112($t0)  # restore F20
-    l.d     $f22, 120($t0)  # restore F22
-    l.d     $f24, 128($t0)  # restore F24
-    l.d     $f26, 136($t0)  # restore F26
-    l.d     $f28, 144($t0)  # restore F28
-    l.d     $f30, 152($t0)  # restore F30
-#endif
-
-    lw      $t9, 96($t0)    # load PC
-    jr      $t9             # jump to context
-.end set_fcontext
-.size set_fcontext, .-set_fcontext
-
-.text
-.globl swap_fcontext
-.align 2
-.type swap_fcontext,@function
-.ent swap_fcontext
-swap_fcontext:
+.type boost_fcontext_jump,@function
+.ent boost_fcontext_jump
+boost_fcontext_jump:
     sw      $s0, ($a0)      # save S0
     sw      $s1, 8($a0)     # save S1
     sw      $s2, 16($a0)    # save S2
@@ -162,38 +93,59 @@ swap_fcontext:
 
     lw      $t9, 96($a1)    # load PC
     jr      $t9             # jump to context
-.end swap_fcontext
-.size swap_fcontext, .-swap_fcontext
+.end boost_fcontext_jump
+.size boost_fcontext_jump, .-boost_fcontext_jump
 
 .text
-.globl make_fcontext
+.globl boost_fcontext_make
 .align 2
-.type make_fcontext,@function
-.ent make_fcontext
-make_fcontext:
+.type boost_fcontext_make,@function
+.ent boost_fcontext_make
+boost_fcontext_make:
+#ifdef __PIC__
+.set    noreorder
+.cpload $t9
+.set    reorder
+#endif
+    sw      $a0, ($a0)          # save the current context
+    sw      $gp, 16($a0)        # save global pointer
     sw      $a1, 96($a0)        # save the address of the function supposed to be run
     sw      $a2, 104($a0)       # save void pointer
     lw      $t0, 160($a0)       # load the stack base
     addiu   $t0, $t0, -16       # reserve 16 byte of argument space
     sw      $t0, 72($a0)        # save the stack base
     lw      $t0, 168($a0)       # load address of next user context
-    sw      $t0, ($a0)          # save the next context
-    la      $t0, link_fcontext  # get address of link_fcontext
-    sw      $t0, 88($a0)        # save address of link_fcontext
+    sw      $t0, 8($a0)         # save the next context
+#ifdef __PIC__
+    addiu   $t9, link_fcontext - boost_fcontext_make # get address of link_fcontext
+#else
+    la      $t9, link_fcontext  # get address of link_fcontext
+#endif
+    sw      $t9, 88($a0)        # save address of link_fcontext
 
     move    $v0, $zero
-    j       $ra
+    jr      $ra
 
 link_fcontext:
-    move    $a0, $s0
-    beq     $a0, $zero, finish  # test if a next context was given
-    la      $t0, set_fcontext   # install next context
-    jr      $t0
-    nop
+    move    $gp, $s2            # restore GP (global pointer)
+    move    $a1, $s1            # set A1 to address of next context
+    beqz    $a1, 2f             # test if a next context was given
 
-finish:
-    la      $t0, _exit          # exit application
-    jr      $t0
-    nop
-.end make_fcontext
-.size make_fcontext, .-make_fcontext
+    move    $a0, $s0            # set A0 to address of current context
+#ifdef __PIC__
+    lw      $t9, %call16(boost_fcontext_jump)($gp)   # install next context
+    jr      $t9
+#else
+    j       boost_fcontext_jump        # install next context
+#endif
+
+2:
+    move    $a0, $zero
+#ifdef __PIC__
+    lw      $t9, %call16(_exit)($gp)  # exit application
+    jalr    $t9
+#else
+    j       _exit               # exit application
+#endif
+.end boost_fcontext_make
+.size boost_fcontext_make, .-boost_fcontext_make

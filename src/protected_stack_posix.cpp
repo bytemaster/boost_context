@@ -16,39 +16,18 @@ extern "C" {
 #include <unistd.h>
 }
 
-#include <cmath>
 #include <stdexcept>
 
 #include <boost/config.hpp>
 #include <boost/assert.hpp>
+#include <boost/format.hpp>
+
+#include <boost/context/stack_helper.hpp>
 
 #ifdef BOOST_HAS_ABI_HEADERS
 #  include BOOST_ABI_PREFIX
 #endif
-
-namespace {
-
-struct helper
-{
-    static std::size_t get_pagesize()
-    {
-        static std::size_t pagesize( ::getpagesize() );
-        return pagesize;
-    }
-
-    static std::size_t calc_pages( std::size_t stacksize)
-    {
-        double x( stacksize / get_pagesize() );
-        if ( 0 != stacksize % get_pagesize() )
-            x += 0.5;
-        std::size_t tmp( ( x - std::floor( x) >= 0.5 )
-            ? static_cast< std::size_t >( std::ceil( x) )
-            : static_cast< std::size_t >( std::floor( x) ) );
-        return tmp;
-    }
-};
-
-}
+#include <stdint.h>
 
 namespace boost {
 namespace contexts {
@@ -60,30 +39,29 @@ protected_stack::protected_stack() :
 protected_stack::protected_stack( std::size_t size) :
     size_( size), size__( 0), address_( 0)
 {
-    if ( 16 >= size_)
-        throw std::invalid_argument("invalid stack size");
+    if ( stack_helper::minimal_stacksize() > size_)
+        throw std::invalid_argument(
+            boost::str( boost::format("invalid stack size: must be at least %d bytes")
+                % stack_helper::minimal_stacksize() ) );
 
-    std::size_t pages( helper::calc_pages( size_) );
-    ++pages; // add guard page
-    size__ = pages * helper::get_pagesize();
-#ifndef __APPLE__
-    int fd( ::open("/dev/zero", O_RDONLY) );
-    BOOST_ASSERT( -1 != fd);
+    if ( ! stack_helper::unlimited_stacksize() && ( stack_helper::maximal_stacksize() < size_) )
+        throw std::invalid_argument(
+            boost::str( boost::format("invalid stack size: must not be larger than %d bytes")
+                % stack_helper::maximal_stacksize() ) );
+
+    const std::size_t pages( stack_helper::page_count( size_) + 1); // add +1 for guard page
+    size__ = pages * stack_helper::pagesize();
+
+    //const int fd( ::open("/dev/zero", O_RDONLY) );
+ //   const int fd( ::open("/tmp/bigfile", O_RDONLY) );
+//    BOOST_ASSERT( -1 != fd);
     void * limit =
-        ::mmap( 0, size__, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-    if( limit == MAP_FAILED )
-        perror( "mmap fail" );
-
-    ::close( fd);
+        ::mmap( 0, size__, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+//    ::close( fd);
     if ( ! limit) throw std::bad_alloc();
 
-    int result( ::mprotect( limit, helper::get_pagesize(), PROT_NONE) );
-    if( result != 0 ) perror( "mprotect" );
+    const int result( ::mprotect( limit, stack_helper::pagesize(), PROT_NONE) );
     BOOST_ASSERT( 0 == result);
-#else
-    void* limit = malloc( size__ );
-#endif
-
     address_ = static_cast< char * >( limit) + size__;
 }
 
@@ -93,11 +71,7 @@ protected_stack::~protected_stack()
     {
         BOOST_ASSERT( 0 < size_ && 0 < size__);
         void * limit = static_cast< char * >( address_) - size__;
-        #ifndef __APPLE__
         ::munmap( limit, size__);
-        #else
-        free( limit );
-        #endif 
     }
 }
 

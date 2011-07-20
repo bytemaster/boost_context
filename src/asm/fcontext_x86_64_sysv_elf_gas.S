@@ -46,55 +46,10 @@
  * **************************************************************************************/
 
 .text
+.globl boost_fcontext_jump
+.type boost_fcontext_jump,@function
 .align 16
-.globl get_fcontext
-get_fcontext:
-    movq     %rbx,       (%rdi)         /* save RBX */
-    movq     %r12,       0x8(%rdi)      /* save R12 */
-    movq     %r13,       0x10(%rdi)     /* save R13 */
-    movq     %r14,       0x18(%rdi)     /* save R14 */
-    movq     %r15,       0x20(%rdi)     /* save R15 */
-    movq     %rbp,       0x28(%rdi)     /* save RBP */
-
-    stmxcsr  0x48(%rdi)                 /* save SSE2 control and status word */
-    fnstcw   0x4c(%rdi)                 /* save x87 control word */
-
-    leaq     0x8(%rsp),  %rcx           /* exclude the return address */
-    movq     %rcx,       0x30(%rdi)     /* save as stack pointer */
-    movq     (%rsp),     %rcx           /* load return address */
-    movq     %rcx,       0x38(%rdi)     /* save return address */
-
-    xorq     %rax,       %rax           /* set RAX to zero */
-    ret                                 /* return */
-.size get_fcontext,.-get_fcontext
-
-.text
-.align 16
-.globl set_fcontext
-set_fcontext:
-    movq     (%rdi),      %rbx      /* restore RBX */
-    movq     0x8(%rdi),   %r12      /* restore R12 */
-    movq     0x10(%rdi),  %r13      /* restore R13 */
-    movq     0x18(%rdi),  %r14      /* restore R14 */
-    movq     0x20(%rdi),  %r15      /* restore R15 */
-    movq     0x28(%rdi),  %rbp      /* restore RBP */
-
-    ldmxcsr  0x48(%rdi)             /* restore SSE2 control and status word */
-    fldcw    0x4c(%rdi)             /* restore x87 control word */
-
-    movq     0x30(%rdi),  %rsp      /* restore RSP */
-    movq     0x38(%rdi),  %rcx      /* fetch the address to return to */
-    pushq    %rcx                   /* push the return address on the new stack so we can return there */
-    movq     0x40(%rdi),  %rdi      /* restore RDI first argument for calledcontext */
-
-    xorq     %rax,        %rax      /* set RAX to zero */
-    ret                             /* 'ret' will pop the return address of the code and jump to it */
-.size set_fcontext,.-set_fcontext
-
-.text
-.align 16
-.globl swap_fcontext
-swap_fcontext:
+boost_fcontext_jump:
     movq     %rbx,       (%rdi)         /* save RBX */
     movq     %r12,       0x8(%rdi)      /* save R12 */
     movq     %r13,       0x10(%rdi)     /* save R13 */
@@ -123,35 +78,42 @@ swap_fcontext:
 
     movq     0x30(%rsi),  %rsp      /* restore RSP */
     movq     0x38(%rsi),  %rcx      /* fetch the address to return to */
-    pushq    %rcx                   /* push the return address on the new stack so we can return there */
     movq     0x40(%rsi),  %rdi      /* restore RDI */
 
     xorq     %rax,        %rax      /* set RAX to zero */
-    ret                             /* 'ret' will pop the return address of the code and jump to it */
-.size swap_fcontext,.-swap_fcontext
+    jmp      *%rcx                  /* indirect jump to context */
+.size boost_fcontext_jump,.-boost_fcontext_jump
 
 .text
+.globl boost_fcontext_make
+.type boost_fcontext_make,@function
 .align 16
-.globl make_fcontext
-make_fcontext:
+boost_fcontext_make:
+    movq   %rdi,                 (%rdi)     /* save the address of current context */
     movq   %rsi,                 0x38(%rdi) /* save the address of the function supposed to run */
     movq   %rdx,                 0x40(%rdi) /* save the the void pointer */
     movq   0x50(%rdi),           %rdx       /* load the stack base */
-    leaq   -0x10(%rdx),          %rdx       /* reserve space for return address, must be 16 byte border */
+    leaq   -0x8(%rdx),           %rdx       /* reserve space for the last frame on stack, (RSP + 8) % 16 == 0 */
     movq   %rdx,                 0x30(%rdi) /* save the address */
     movq   0x60(%rdi),           %rcx       /* load the address of the next context */
-    movq   %rcx,                 (%rdi)     /* save the address of next context */
-    leaq   link_fcontext(%rip),  %rcx       /* helper code executed after fn() returns */
+    movq   %rcx,                 0x8(%rdi)  /* save the address of next context */
+    stmxcsr  0x48(%rdi)                     /* save SSE2 control and status word */
+    fnstcw 0x4c(%rdi)                       /* save x87 control word */
+    leaq   link_fcontext(%rip),  %rcx       /* helper code executed after context function returns */
     movq   %rcx,                 (%rdx)
     xorq   %rax,                 %rax       /* set RAX to zero */
-    ret                                     /* return 0 */
+    ret
 
 link_fcontext:
-    movq   %rbx,               %rdi
-    testq  %rdi,               %rdi         /* test if a next context was given */
-    je     finish                           /* jump to finish */
-    call   set_fcontext@PLT                 /* install next context */
+    movq   %r12,               %rsi			/* restore next context */
+    testq  %rsi,               %rsi         /* test if a next context was given */
+    je     1f                               /* jump to finish */
 
-finish:
+    movq   %rbx,               %rdi         /* restore current context */
+    call   boost_fcontext_jump@PLT          /* jump to next context */
+
+1:
+    xorq    %rdi,              %rdi         /* exit code is zero */
     call   _exit@PLT                        /* exit application */
-.size make_fcontext,.-make_fcontext
+	hlt
+.size boost_fcontext_make,.-boost_fcontext_make

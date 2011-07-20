@@ -1,47 +1,40 @@
+
+//          Copyright Oliver Kowalke 2009.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE_1_0.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
 #include <cstdlib>
 #include <iostream>
 #include <string>
 
-#include <boost/bind.hpp>
-
 #include <boost/context/all.hpp>
+#include <boost/move/move.hpp>
 
 int x = 7;
-void fn( void * vp);
+void fn( int);
 
-boost::protected_stack stack( 65536);
-boost::context<> ctx1;
-boost::context<> ctx2( fn, & x, boost::move( stack) );
+boost::contexts::protected_stack stack( boost::contexts::stack_helper::default_stacksize());
+boost::contexts::context<> ctx( fn, x, boost::move( stack), false);
 
-void fn( void * vp)
+void fn( int j)
 {
-    int i = * ( int *) vp;
-    for(;;)
+    for( int i = 0; i < j; ++i)
     {
-        std::cout << ++i << std::endl;
-        ctx2.jump_to( ctx1);
+        std::cout << "fn(): local variable i == " << i << std::endl;
+        ctx.suspend();
     }
 }
 
-int main()
+int main( int argc, char * argv[])
 {
-    try
+    while ( ! ctx.is_complete() )
     {
-
-        std::cout << "start" << std::endl;
-
-        for ( int i = 0; i < 5; ++i)
-        {
-            ctx1.jump_to( ctx2);
-        }
-
-        std::cout << "finish" << std::endl;
-
-        return EXIT_SUCCESS;
+        std::cout << "main() calls context ctx" << std::endl;
+        ctx.resume();
     }
-    catch ( std::exception const& e)
-    { std::cerr << "exception: " << e.what() << std::endl; }
-    catch (...)
-    { std::cerr << "unhandled exception" << std::endl; }
-    return EXIT_FAILURE;
+
+    std::cout << "Done" << std::endl;
+
+    return EXIT_SUCCESS;
 }

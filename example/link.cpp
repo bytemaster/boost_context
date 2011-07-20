@@ -1,39 +1,52 @@
+
+//          Copyright Oliver Kowalke 2009.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE_1_0.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
 #include <cstdlib>
 #include <iostream>
 #include <string>
 
-#include <boost/bind.hpp>
-
 #include <boost/context/all.hpp>
 
-
-void fn( void * vp)
+void fn1()
 {
-    int i = * ( int *) vp;
-    std::cout << "i == " << i << std::endl;
+    std::cout << "inside fn1(): when fn1() returns fn2() of next context (linked) will be entered"  << 3.1415 <<std::endl;
 }
 
-int main()
+boost::contexts::context<> ctx2;
+
+void fn2()
 {
-    try
+    std::cout << "first time inside fn2()" << std::endl;
+    ctx2.suspend();
+    std::cout << "second time inside fn2(), returns to main()" << std::endl;
+}
+
+int main( int argc, char * argv[])
+{
     {
-        int x = 7;
+        ctx2 = boost::contexts::context<>(
+            fn2, 
+            boost::contexts::protected_stack( boost::contexts::stack_helper::default_stacksize()),
+            false,
+            true);
+        boost::contexts::context<> ctx1(
+            fn1, 
+            boost::contexts::protected_stack( boost::contexts::stack_helper::default_stacksize()),
+            false,
+            ctx2);
 
-        boost::protected_stack stack( 65536);
-        boost::context<> ctx1;
-        boost::context<> ctx2( fn, ctx1, & x, boost::move( stack) );
-
-        std::cout << "start" << std::endl;
-
-        ctx1.jump_to( ctx2);
-
-        std::cout << "finish" << std::endl;
-
-        return EXIT_SUCCESS;
+        ctx1.resume();
     }
-    catch ( std::exception const& e)
-    { std::cerr << "exception: " << e.what() << std::endl; }
-    catch (...)
-    { std::cerr << "unhandled exception" << std::endl; }
-    return EXIT_FAILURE;
+
+    std::cout << "main(): ctx1 is destructed\n";
+
+    std::cout << "main(): resume ctx2\n";
+    ctx2.resume();
+
+    std::cout << "Done" << std::endl;
+
+    return EXIT_SUCCESS;
 }

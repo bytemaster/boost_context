@@ -1,23 +1,27 @@
-# Distributed under the Boost Software License, Version 1.0.
-# See http://www.boost.org/LICENSE_1_0.txt
+include_directories( include )
+include_directories( ../move/include )
 
-boost_project("Context"
-  AUTHORS
-    "Oliver Kowalke"
-    "Daniel Larimer"
-  DESCRIPTION
-    "User space context switching."
-  )
+IF( APPLE )
+SET_PROPERTY( SOURCE 
+              src/asm/fcontext_x86_64_sysv_macho_gas.S 
+              PROPERTY LANGUAGE C)
+SET( sources src/protected_stack_posix.cpp 
+             src/stack_helper_posix.cpp 
+             src/asm/fcontext_x86_64_sysv_macho_gas.S 
+             )
+ELSE (APPLE)
 
-file(GLOB_RECURSE headers boost/*.* )
-boost_add_headers(${headers})
+ENABLE_LANGUAGE(ASM_MASM) 
 
-set_property(SOURCE src/libtask/asm.S PROPERTY LANGUAGE C )
-boost_add_library( context
-    SOURCES
-        src/protected_stack_posix.cpp
-        src/libtask/asm.S
-        src/libtask/context.c
-)
+SET( sources src/protected_stack_windows.cpp 
+             src/stack_helper_windows.cpp 
+             src/seh.cpp 
+             src/asm/fcontext_i386_ms_pe_masm.asm
+             )
+ENDIF(APPLE)
 
+SETUP_LIBRARY( boost_context SOURCES ${sources}
+                             LIBRARIES 
+                             LIBRARY_TYPE STATIC )
 
+ADD_SUBDIRECTORY( example )
