@@ -7,3 +7,6 @@
 /swap_test
 /unwind_test
 /Makefile
+/CMakeScripts/
+/Debug/
+/dev.build/
