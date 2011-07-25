@@ -1,3 +1,5 @@
 /*.a
 /*.cmake
 /Makefile
+/Debug/
+/dev.build/
