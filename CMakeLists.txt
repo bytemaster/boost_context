@@ -24,4 +24,5 @@ SETUP_LIBRARY( boost_context SOURCES ${sources}
                              LIBRARIES 
                              LIBRARY_TYPE STATIC )
 
+install( DIRECTORY include/boost/context   DESTINATION include/boost )
 ADD_SUBDIRECTORY( example )
