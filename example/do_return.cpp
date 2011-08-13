@@ -9,14 +9,13 @@
 #include <string>
 
 #include <boost/context/all.hpp>
-#include <boost/move/move.hpp>
 
 void fn();
 void fn2();
 boost::contexts::protected_stack stack( boost::contexts::stack_helper::default_stacksize());
-boost::contexts::context<> ctx( fn, boost::move( stack), false, true);
+boost::contexts::context<> ctx( fn, boost::interprocess::move( stack), false, true);
 boost::contexts::protected_stack stack2( boost::contexts::stack_helper::default_stacksize());
-boost::contexts::context<> ctx2( fn2, boost::move( stack2), false, true);
+boost::contexts::context<> ctx2( fn2, boost::interprocess::move( stack2), false, true);
 
 void fn2() {
     std::cout << "inside function fn2(): fn2() returns return to fn()" << std::endl;

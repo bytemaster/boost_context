@@ -10,7 +10,7 @@
 #include <boost/assert.hpp>
 #include <boost/bind.hpp>
 #include <boost/config.hpp>
-#include <boost/move/move.hpp>
+#include <boost/interprocess/detail/move.hpp>
 #include <boost/preprocessor/repetition.hpp>
 #include <boost/type_traits/is_convertible.hpp>
 #include <boost/type_traits/remove_reference.hpp>
@@ -43,7 +43,7 @@ private:
     {
         return base_ptr_t(
             new detail::context_object< void(*)(), StackT >(
-                fn, boost::move( stack), do_unwind, do_return) );
+                fn, boost::interprocess::move( stack), do_unwind, do_return) );
     }
 
     static base_ptr_t make_context_(
@@ -52,7 +52,7 @@ private:
         BOOST_ASSERT( nxt);
         return base_ptr_t(
             new detail::context_object< void(*)(), StackT >(
-                fn, boost::move( stack), do_unwind, nxt.impl_) );
+                fn, boost::interprocess::move( stack), do_unwind, nxt.impl_) );
     }
 
     template< typename Fn >
@@ -61,7 +61,7 @@ private:
     {
         return base_ptr_t(
             new detail::context_object< typename remove_reference< Fn >::type, StackT >(
-                fn, boost::move( stack), do_unwind, do_return) );
+                fn, boost::interprocess::move( stack), do_unwind, do_return) );
     }
 
     template< typename Fn >
@@ -71,7 +71,7 @@ private:
         BOOST_ASSERT( nxt);
         return base_ptr_t(
             new detail::context_object< typename remove_reference< Fn >::type, StackT >(
-                fn, boost::move( stack), do_unwind, nxt.impl_) );
+                fn, boost::interprocess::move( stack), do_unwind, nxt.impl_) );
     }
 #else
     template< typename Fn >
@@ -80,7 +80,7 @@ private:
     {
         return base_ptr_t(
             new detail::context_object< Fn, StackT >(
-                fn, boost::move( stack), do_unwind, do_return) );
+                fn, boost::interprocess::move( stack), do_unwind, do_return) );
     }
 
     template< typename Fn >
@@ -90,7 +90,7 @@ private:
         BOOST_ASSERT( nxt);
         return base_ptr_t(
             new detail::context_object< Fn, StackT >(
-                fn, boost::move( stack), do_unwind, nxt.impl_) );
+                fn, boost::interprocess::move( stack), do_unwind, nxt.impl_) );
     }
 
     template< typename Fn >
@@ -99,7 +99,7 @@ private:
     {
         return base_ptr_t(
             new detail::context_object< Fn, StackT >(
-                fn, boost::move( stack), do_unwind, do_return) );
+                fn, boost::interprocess::move( stack), do_unwind, do_return) );
     }
 
     template< typename Fn >
@@ -109,7 +109,7 @@ private:
         BOOST_ASSERT( nxt);
         return base_ptr_t(
             new detail::context_object< Fn, StackT >(
-                fn, boost::move( stack), do_unwind, nxt.impl_) );
+                fn, boost::interprocess::move( stack), do_unwind, nxt.impl_) );
     }
 #endif
 
@@ -126,42 +126,42 @@ public:
 # ifdef BOOST_MSVC
     template< typename Fn >
     context( Fn & fn, StackT && stack, bool do_unwind, bool do_return = true) :
-        impl_( make_context_( static_cast< Fn & >( fn), boost::move( stack), do_unwind, do_return) )
+        impl_( make_context_( static_cast< Fn & >( fn), boost::interprocess::move( stack), do_unwind, do_return) )
     {}
 
     template< typename Fn >
     context( Fn & fn, StackT && stack, bool do_unwind, context & nxt) :
-        impl_( make_context_( static_cast< Fn & >( fn), boost::move( stack), do_unwind, nxt) )
+        impl_( make_context_( static_cast< Fn & >( fn), boost::interprocess::move( stack), do_unwind, nxt) )
     {}
 # endif
     template< typename Fn >
     context( Fn && fn, StackT && stack, bool do_unwind, bool do_return = true) :
-        impl_( make_context_( static_cast< Fn && >( fn), boost::move( stack), do_unwind, do_return) )
+        impl_( make_context_( static_cast< Fn && >( fn), boost::interprocess::move( stack), do_unwind, do_return) )
     {}
 
     template< typename Fn >
     context( Fn && fn, StackT && stack, bool do_unwind, context & nxt) :
-        impl_( make_context_( static_cast< Fn && >( fn), boost::move( stack), do_unwind, nxt) )
+        impl_( make_context_( static_cast< Fn && >( fn), boost::interprocess::move( stack), do_unwind, nxt) )
     {}
 #else
     template< typename Fn >
     context( Fn fn, BOOST_RV_REF( StackT) stack, bool do_unwind, bool do_return = true) :
-        impl_( make_context_( fn, boost::move( stack), do_unwind, do_return) )
+        impl_( make_context_( fn, boost::interprocess::move( stack), do_unwind, do_return) )
     {}
 
     template< typename Fn >
     context( Fn fn, BOOST_RV_REF( StackT) stack, bool do_unwind, context & nxt) :
-        impl_( make_context_( fn, boost::move( stack), do_unwind, nxt) )
+        impl_( make_context_( fn, boost::interprocess::move( stack), do_unwind, nxt) )
     {}
 
     template< typename Fn >
     context( BOOST_RV_REF( Fn) fn, BOOST_RV_REF( StackT) stack, bool do_unwind, bool do_return = true) :
-        impl_( make_context_( fn, boost::move( stack), do_unwind, do_return) )
+        impl_( make_context_( fn, boost::interprocess::move( stack), do_unwind, do_return) )
     {}
 
     template< typename Fn >
     context( BOOST_RV_REF( Fn) fn, BOOST_RV_REF( StackT) stack, bool do_unwind, context & nxt) :
-        impl_( make_context_( fn, boost::move( stack), do_unwind, nxt) )
+        impl_( make_context_( fn, boost::interprocess::move( stack), do_unwind, nxt) )
     {}
 #endif
 
@@ -175,7 +175,7 @@ public:
         impl_( \
             make_context_( \
                 boost::bind( boost::type< void >(), fn, BOOST_PP_ENUM_PARAMS(n, a) ), \
-                boost::move( stack), do_unwind, do_return) ) \
+                boost::interprocess::move( stack), do_unwind, do_return) ) \
     {} \
     \
     template< typename Fn, BOOST_PP_ENUM_PARAMS(n, typename A) > \
@@ -183,7 +183,7 @@ public:
         impl_( \
             make_context_( \
                 boost::bind( boost::type< void >(), fn, BOOST_PP_ENUM_PARAMS(n, a) ), \
-                boost::move( stack), do_unwind, nxt) ) \
+                boost::interprocess::move( stack), do_unwind, nxt) ) \
     {} \
 
 #ifndef BOOST_CONTEXT_ARITY
@@ -203,7 +203,7 @@ BOOST_PP_REPEAT_FROM_TO( 1, BOOST_CONTEXT_ARITY, BOOST_CONTEXT_CTOR, ~)
     context & operator=( BOOST_RV_REF( context) other)
     {
         if ( this == & other) return * this;
-        context tmp( boost::move( other) );
+        context tmp( boost::interprocess::move( other) );
         swap( tmp);
         return * this;
     }

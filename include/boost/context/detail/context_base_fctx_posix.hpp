@@ -15,7 +15,7 @@
 #include <boost/assert.hpp>
 #include <boost/config.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <boost/move/move.hpp>
+#include <boost/interprocess/detail/move.hpp>
 #include <boost/utility.hpp>
 
 #include <boost/context/detail/config.hpp>
@@ -93,7 +93,7 @@ private:
 
 public:
     context_base( BOOST_RV_REF( StackT) stack, bool do_unwind, bool do_return) :
-        stack_( boost::move( stack) ), ctx_caller_(), ctx_callee_(), nxt_(),
+        stack_( boost::interprocess::move( stack) ), ctx_caller_(), ctx_callee_(), nxt_(),
         flags_( do_unwind ? flag_force_unwind : flag_dont_force_unwind), use_count_( 0)
     {
         BOOST_ASSERT( stack_);
@@ -121,7 +121,7 @@ public:
     }
 
     context_base( BOOST_RV_REF( StackT) stack, bool do_unwind, ptr_t nxt) :
-        stack_( boost::move( stack) ), ctx_caller_(), ctx_callee_(), nxt_( nxt),
+        stack_( boost::interprocess::move( stack) ), ctx_caller_(), ctx_callee_(), nxt_( nxt),
         flags_( do_unwind ? flag_force_unwind : flag_dont_force_unwind), use_count_( 0)
     {
         BOOST_ASSERT( stack_);
@@ -162,7 +162,7 @@ public:
     { return static_cast< bool >( stack_); }
 
     StackT release_stack()
-    { return boost::move( stack_); }
+    { return boost::interprocess::move( stack_); }
 
     void resume()
     {
