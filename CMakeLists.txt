@@ -1,27 +1,37 @@
 include_directories( include )
 include_directories( ../move/include )
 
-
 IF( UNIX )
+	IF( ENABLE_ARM )
+		SET_PROPERTY( SOURCE 
+			      src/asm/fcontext_arm_aapcs_elf_gas.S 
+			      PROPERTY LANGUAGE C)
+		SET( sources src/protected_stack_posix.cpp 
+			     src/stack_helper_posix.cpp 
+			     src/asm/fcontext_arm_aapcs_elf_gas.S 
+			     )
+	ELSE()
 
-	IF( APPLE )
-	SET_PROPERTY( SOURCE 
-		      src/asm/fcontext_x86_64_sysv_macho_gas.S 
-		      PROPERTY LANGUAGE C)
-	SET( sources src/protected_stack_posix.cpp 
-		     src/stack_helper_posix.cpp 
-		     src/asm/fcontext_x86_64_sysv_macho_gas.S 
-		     )
-	ELSE (APPLE)
+		IF( APPLE )
+		SET_PROPERTY( SOURCE 
+			      src/asm/fcontext_x86_64_sysv_macho_gas.S 
+			      PROPERTY LANGUAGE C)
+		SET( sources src/protected_stack_posix.cpp 
+			     src/stack_helper_posix.cpp 
+			     src/asm/fcontext_x86_64_sysv_macho_gas.S 
+			     )
+		ELSE (APPLE)
 
-	SET_PROPERTY( SOURCE 
-		      src/asm/fcontext_x86_64_sysv_elf_gas.S
-		      PROPERTY LANGUAGE C)
-	SET( sources src/protected_stack_posix.cpp 
-		     src/stack_helper_posix.cpp 
-		     src/asm/fcontext_x86_64_sysv_elf_gas.S
-		     )
-	ENDIF(APPLE)
+		SET_PROPERTY( SOURCE 
+			      src/asm/fcontext_x86_64_sysv_elf_gas.S
+			      PROPERTY LANGUAGE C)
+		SET( sources src/protected_stack_posix.cpp 
+			     src/stack_helper_posix.cpp 
+			     src/asm/fcontext_x86_64_sysv_elf_gas.S
+			     )
+		ENDIF(APPLE)
+
+	ENDIF()
 ENDIF( UNIX )
 
 IF( WIN32 )
