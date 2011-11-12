@@ -168,7 +168,7 @@ public:
     {
         BOOST_ASSERT( owns_stack() );
         BOOST_ASSERT( ! is_complete() );
-        //BOOST_ASSERT( ! is_running() );
+        BOOST_ASSERT( ! is_running() );
 
         flags_ |= flag_resumed;
         flags_ |= flag_running;
