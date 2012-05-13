@@ -1,10 +1,25 @@
+
+//          Copyright Oliver Kowalke 2009.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE_1_0.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
+
+#define BOOST_CONTEXT_SOURCE
+
 extern "C" {
 
 #include <stddef.h>
 #include <stdio.h>
 
+#include <excpt.h>
 #include <windows.h>
 #include <winnt.h>
+
+#if defined(_MSC_VER)
+# define SNPRINTF _snprintf
+#else
+# define SNPRINTF snprintf
+#endif
 
 static char * exception_description(
     _EXCEPTION_RECORD const* record, char * description, size_t len)
@@ -18,7 +33,7 @@ static char * exception_description(
     {
         const char * accessType = ( info[0]) ? "writing" : "reading";
         const ULONG_PTR address = info[1];
-        _snprintf_s( description, len, _TRUNCATE, "Access violation %s 0x%08X", accessType, address);
+        SNPRINTF( description, len, "Access violation %s 0x%08lX", accessType, address);
         return description;
     }
     case EXCEPTION_DATATYPE_MISALIGNMENT:    return "Datatype misalignment";
@@ -44,20 +59,19 @@ static char * exception_description(
     case EXCEPTION_INVALID_HANDLE:           return "Invalid handle";
     }
 
-    _snprintf_s( description, len, _TRUNCATE, "Unknown (0x%08X)", code);
-
+    SNPRINTF( description, len, "Unknown (0x%08lX)", code);
     return description;
 }
 
-EXCEPTION_DISPOSITION boost_fcontext_seh(
+EXCEPTION_DISPOSITION seh_fcontext(
      struct _EXCEPTION_RECORD * record,
-     void * frame,
-     struct _CONTEXT * ctx,
-     void * dispatcher)
+     void *,
+     struct _CONTEXT *,
+     void *)
 {
     char description[255];
 
-    fprintf( stderr, "exception: %s (%08X)\n",
+    fprintf( stderr, "exception: %s (%08lX)\n",
         exception_description( record, description, sizeof( description) ),
         record->ExceptionCode);
 

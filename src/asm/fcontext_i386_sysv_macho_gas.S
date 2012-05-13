@@ -32,10 +32,9 @@
  * *****************************************************************/
 
 .text
-.globl jump_fcontext
+.globl _jump_fcontext
 .align 2
-.type jump_fcontext,@function
-jump_fcontext:
+_jump_fcontext:
     movl    0x4(%esp), %ecx         /* load address of the first fcontext_t arg */
     movl    %edi,       (%ecx)      /* save EDI */
     movl    %esi,       0x4(%ecx)   /* save ESI */
@@ -69,13 +68,11 @@ jump_fcontext:
     movl    0x14(%edx),  %edx       /* fetch the address to return to */
 
     jmp     *%edx                   /* indirect jump to context */
-.size jump_fcontext,.-jump_fcontext
 
 .text
-.globl make_fcontext
+.globl _make_fcontext
 .align 2
-.type make_fcontext,@function
-make_fcontext:
+_make_fcontext:
     movl   0x4(%esp),      %eax         /* load address of the fcontext_t */
     movl   %eax,           (%eax)       /* save the address of current context */
     movl   0x8(%esp),      %ecx         /* load the address of the context function */
@@ -119,4 +116,3 @@ finish:
     pushl   %eax                        /* exit code is zero */
     call   _exit@PLT                    /* exit application */
     hlt
-.size make_fcontext,.-make_fcontext

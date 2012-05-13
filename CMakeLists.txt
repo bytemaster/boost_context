@@ -13,13 +13,14 @@ IF( UNIX )
 	ELSE()
 
 		IF( APPLE )
-		SET_PROPERTY( SOURCE 
-			      src/asm/fcontext_x86_64_sysv_macho_gas.S 
-			      PROPERTY LANGUAGE C)
-		SET( sources src/protected_stack_posix.cpp 
-			     src/stack_helper_posix.cpp 
-			     src/asm/fcontext_x86_64_sysv_macho_gas.S 
-			     )
+        SET_PROPERTY( SOURCE 
+                src/asm/fcontext_x86_64_sysv_macho_gas.S 
+                PROPERTY LANGUAGE C)
+        SET( sources src/stack_utils_posix.cpp
+                     src/stack_allocator_posix.cpp
+                     src/fcontext.cpp
+                     src/asm/fcontext_x86_64_sysv_macho_gas.S 
+               )
 		ELSE (APPLE)
 
 		SET_PROPERTY( SOURCE 
@@ -38,7 +39,9 @@ IF( WIN32 )
 
 ENABLE_LANGUAGE(ASM_MASM) 
 
-SET( sources src/protected_stack_windows.cpp 
+SET( sources src/fcontext.cpp
+             src/seh.cpp
+             src/stack_allocator_windows.cpp
              src/stack_helper_windows.cpp 
              src/seh.cpp 
              src/asm/fcontext_i386_ms_pe_masm.asm
