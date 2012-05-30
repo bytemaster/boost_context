@@ -52,7 +52,7 @@ ENABLE_LANGUAGE(ASM_MASM)
 SET( sources src/fcontext.cpp
              src/seh.cpp
              src/stack_allocator_windows.cpp
-             src/stack_helper_windows.cpp 
+             src/stack_utils_windows.cpp 
              src/seh.cpp 
              src/asm/fcontext_i386_ms_pe_masm.asm
              )
